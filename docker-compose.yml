@@ -1,0 +1,9 @@
+services:
+  odontomovel:
+    build: .
+    container_name: odontomovel_app
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    env_file:
+      - .env

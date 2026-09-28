@@ -1,0 +1,7 @@
+{
+  "name": "OdontoMóvel Gestão - Frotas & Saúde Bucal Pública",
+  "description": "Sistema integrado de gestão operacional, clínica e logística para carretas odontológicas móveis em contratos municipais.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
