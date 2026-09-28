@@ -3,9 +3,9 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Instala dependências (usando npm install para garantir build mesmo sem package-lock.json versionado)
+# Instala dependências tolerando variações de peer dependencies do React 19
 COPY package*.json ./
-RUN npm install
+RUN npm install --legacy-peer-deps
 
 # Copia código e compila a aplicação
 COPY . .
