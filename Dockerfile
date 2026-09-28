@@ -3,11 +3,11 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Instala dependências
+# Instala dependências (usando npm install para garantir build mesmo sem package-lock.json versionado)
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 
-# Copia código e compila a aplicação com as variáveis do .env
+# Copia código e compila a aplicação
 COPY . .
 RUN npm run build
 
@@ -20,3 +20,4 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
 
 CMD ["nginx", "-g", "daemon off;"]
+
