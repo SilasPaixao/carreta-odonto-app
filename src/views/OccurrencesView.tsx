@@ -146,7 +146,7 @@ export const OccurrencesView: React.FC<OccurrencesViewProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-slate-900">
-            Central de Alertas & Ocorrências de Veículos
+            Central de Alertas e Ocorrências de Veículos
           </h1>
           <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
             <span>Monitoramento de Incidentes Mecânicos & Estruturais</span>
@@ -352,7 +352,7 @@ export const OccurrencesView: React.FC<OccurrencesViewProps> = ({
                       </button>
                     )}
 
-                    {currentUser.role === 'Admin' && (
+                    {(currentUser.role === 'Admin' || occ.reportedBy === currentUser.name || canResolve) && (
                       <button
                         onClick={() => setDeletingOccurrence(occ)}
                         className="px-2.5 py-1.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"

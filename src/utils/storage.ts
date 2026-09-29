@@ -54,15 +54,16 @@ export const db = {
   getUsers: (): AppUser[] => safeGet<AppUser[]>(STORAGE_KEYS.USERS, initialUsers),
   saveUsers: (users: AppUser[]): void => safeSet(STORAGE_KEYS.USERS, users),
 
-  getCurrentUser: (): AppUser => {
-    const user = safeGet<AppUser | null>(STORAGE_KEYS.CURRENT_USER, null);
-    if (user) return user;
-    const users = db.getUsers();
-    const admin = users.find(u => u.role === 'Admin' && u.status === 'active') || users[0];
-    safeSet(STORAGE_KEYS.CURRENT_USER, admin);
-    return admin;
+  getCurrentUser: (): AppUser | null => {
+    return safeGet<AppUser | null>(STORAGE_KEYS.CURRENT_USER, null);
   },
-  setCurrentUser: (user: AppUser): void => safeSet(STORAGE_KEYS.CURRENT_USER, user),
+  setCurrentUser: (user: AppUser | null): void => {
+    if (user === null) {
+      localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+    } else {
+      safeSet(STORAGE_KEYS.CURRENT_USER, user);
+    }
+  },
 
   getUnits: (): MobileUnit[] => safeGet<MobileUnit[]>(STORAGE_KEYS.UNITS, initialUnits),
   saveUnits: (units: MobileUnit[]): void => safeSet(STORAGE_KEYS.UNITS, units),

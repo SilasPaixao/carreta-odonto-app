@@ -330,7 +330,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                       >
                         Editar
                       </button>
-                      {currentUser.role === 'Admin' && (
+                      {(currentUser.role === 'Admin' || canEdit) && (
                         <button
                           onClick={() => setDeletingItem(item)}
                           className="px-2 py-1 text-[11px] font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded border border-rose-200 transition-colors cursor-pointer"

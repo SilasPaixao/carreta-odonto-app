@@ -11,10 +11,10 @@ import {
   AttendanceRecord 
 } from './types';
 import { Navbar } from './components/Navbar';
-import { UserSwitcherModal } from './components/UserSwitcherModal';
 import { RegisterUserModal } from './components/RegisterUserModal';
 import { AdminApprovalModal } from './components/AdminApprovalModal';
 import { PrintReportModal } from './components/PrintReportModal';
+import { AuthScreen } from './components/AuthScreen';
 
 import { StatisticsView } from './views/StatisticsView';
 import { FleetHealthLocationView } from './views/FleetHealthLocationView';
@@ -39,7 +39,7 @@ import {
 } from 'lucide-react';
 
 export default function App() {
-  const [currentUser, setCurrentUser] = useState<AppUser>(() => db.getCurrentUser());
+  const [currentUser, setCurrentUser] = useState<AppUser | null>(() => db.getCurrentUser());
   const [users, setUsers] = useState<AppUser[]>(() => db.getUsers());
   const [units, setUnits] = useState<MobileUnit[]>(() => db.getUnits());
   const [occurrences, setOccurrences] = useState<VehicleOccurrence[]>(() => db.getOccurrences());
@@ -59,10 +59,86 @@ export default function App() {
     | 'team'
     | 'permissions';
 
-  const [activeTab, setActiveTab] = useState<NavTab>('fleet_health');
+  // Read initial route from URL hash or pathname (e.g. #/inventory or #statistics or /pacientes)
+  const getTabFromUrl = (): NavTab | null => {
+    const raw = (window.location.hash || window.location.pathname || '')
+      .replace(/^#\/?/, '')
+      .replace(/^\//, '')
+      .toLowerCase();
+
+    const mapping: Record<string, NavTab> = {
+      'statistics': 'statistics',
+      'estatisticas': 'statistics',
+      'dashboard': 'statistics',
+      'fleet_health': 'fleet_health',
+      'frota': 'fleet_health',
+      'saude': 'fleet_health',
+      'occurrences': 'occurrences',
+      'ocorrencias': 'occurrences',
+      'alertas': 'occurrences',
+      'mobile_units': 'mobile_units',
+      'carretas': 'mobile_units',
+      'unidades': 'mobile_units',
+      'inventory': 'inventory',
+      'estoque': 'inventory',
+      'patients': 'patients',
+      'pacientes': 'patients',
+      'clientes': 'patients',
+      'team': 'team',
+      'equipe': 'team',
+      'profissionais': 'team',
+      'permissions': 'permissions',
+      'permissoes': 'permissions'
+    };
+
+    return mapping[raw] || null;
+  };
+
+  const [activeTab, setActiveTab] = useState<NavTab>(() => getTabFromUrl() || 'fleet_health');
+  const [attemptedRouteNotice, setAttemptedRouteNotice] = useState<string | null>(() => {
+    const attempted = getTabFromUrl();
+    return attempted ? attempted : null;
+  });
+
+  // URL Hash Synchronizer
+  useEffect(() => {
+    if (currentUser) {
+      window.location.hash = `#/${activeTab}`;
+    } else {
+      // Se não autenticado, qualquer hash ou tentativa marretada de rota deve redirecionar para a tela de login
+      if (window.location.hash && window.location.hash !== '#/login') {
+        const attempted = getTabFromUrl();
+        if (attempted) {
+          setAttemptedRouteNotice(attempted);
+        }
+      }
+      window.location.hash = '#/login';
+    }
+  }, [activeTab, currentUser]);
+
+  // Listen to manual URL hash changes (quando o usuário tenta marretar na barra de endereço)
+  useEffect(() => {
+    const handleHashChange = () => {
+      const target = getTabFromUrl();
+      if (!currentUser) {
+        // Usuário não autenticado tentando marretar URL
+        if (target) {
+          setAttemptedRouteNotice(target);
+        }
+        window.location.hash = '#/login';
+        return;
+      }
+
+      if (target) {
+        setActiveTab(target);
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [currentUser]);
 
   // Modals state
-  const [isUserSwitcherOpen, setIsUserSwitcherOpen] = useState(false);
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [isAdminApprovalOpen, setIsAdminApprovalOpen] = useState(false);
   const [printModalType, setPrintModalType] = useState<'vehicles' | 'patients' | 'statistics' | null>(null);
@@ -101,7 +177,8 @@ export default function App() {
   }, [currentUser]);
 
   // Robust permission evaluator for tab visibility adhering to all user guidelines
-  const canAccessTab = (tab: NavTab, user: AppUser, perms: RolePermissions): boolean => {
+  const canAccessTab = (tab: NavTab, user: AppUser | null, perms: RolePermissions): boolean => {
+    if (!user) return false;
     if (user.role === 'Admin') return true;
     if (tab === 'permissions') return false; // exclusively admin
 
@@ -138,6 +215,7 @@ export default function App() {
 
   // If currently active tab is not authorized for currentUser, fallback gracefully
   useEffect(() => {
+    if (!currentUser) return;
     if (!canAccessTab(activeTab, currentUser, permissions)) {
       const candidateTabs: NavTab[] = [
         'occurrences',
@@ -218,7 +296,7 @@ export default function App() {
         return {
           ...u,
           status: 'active' as const,
-          approvedBy: currentUser.name
+          approvedBy: currentUser ? currentUser.name : 'Administrador'
         };
       }
       return u;
@@ -237,6 +315,28 @@ export default function App() {
       return u;
     });
     setUsers(updated);
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    window.location.hash = '#/login';
+  };
+
+  const handleLoginSuccess = (user: AppUser) => {
+    handleUserSelect(user);
+    // Redireciona para rota permitida
+    const fallbackTab: NavTab = user.role === 'Motorista' 
+      ? 'occurrences' 
+      : user.role === 'Almoxarife' 
+      ? 'inventory' 
+      : 'fleet_health';
+    
+    const target = attemptedRouteNotice && canAccessTab(attemptedRouteNotice as NavTab, user, permissions)
+      ? (attemptedRouteNotice as NavTab)
+      : fallbackTab;
+
+    setActiveTab(target);
+    setAttemptedRouteNotice(null);
   };
 
   const handleUpdateUnitLocation = (newLog: LocationUpdateLog) => {
@@ -264,6 +364,14 @@ export default function App() {
     setOccurrences(prev => [newOcc, ...prev]);
   };
 
+  const handleUpdateOccurrence = (updatedOcc: VehicleOccurrence) => {
+    setOccurrences(prev => prev.map(o => (o.id === updatedOcc.id ? updatedOcc : o)));
+  };
+
+  const handleDeleteOccurrence = (id: string) => {
+    setOccurrences(prev => prev.filter(o => o.id !== id));
+  };
+
   const handleResolveOccurrence = (id: string, notes: string, cost?: number) => {
     setOccurrences(prev =>
       prev.map(occ => {
@@ -272,7 +380,7 @@ export default function App() {
             ...occ,
             status: 'Resolvido' as const,
             resolvedAt: new Date().toISOString(),
-            resolvedBy: currentUser.name,
+            resolvedBy: currentUser ? currentUser.name : 'Administrador',
             resolutionNotes: notes,
             estimatedCost: cost !== undefined ? cost : occ.estimatedCost
           };
@@ -296,6 +404,14 @@ export default function App() {
 
   const handleAddPatient = (newPatient: PatientClient) => {
     setPatients(prev => [newPatient, ...prev]);
+  };
+
+  const handleUpdatePatient = (updatedPatient: PatientClient) => {
+    setPatients(prev => prev.map(p => (p.id === updatedPatient.id ? updatedPatient : p)));
+  };
+
+  const handleDeletePatient = (id: string) => {
+    setPatients(prev => prev.filter(p => p.id !== id));
   };
 
   const handleAddAttendance = (patientId: string, attendance: AttendanceRecord) => {
@@ -327,6 +443,20 @@ export default function App() {
     o => o.status !== 'Resolvido'
   ).length;
 
+  // STRICT AUTHENTICATION GATE:
+  // "a tela inicial deve ser a tela de login/ cadastro para admins; Só acessa qualquer outra área com autenticação, mesmo se colocarem o link marretado de uma área existente no sistema, se não tiver autenticado, deve ser direcionado para a tela de login"
+  if (!currentUser) {
+    return (
+      <AuthScreen
+        users={users}
+        units={units}
+        onLoginSuccess={handleLoginSuccess}
+        onUserRegistered={handleUserRegistered}
+        attemptedPath={attemptedRouteNotice}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col text-slate-900">
       {/* Primary Top Bar adhering to Top Bar Contract */}
@@ -335,10 +465,10 @@ export default function App() {
           currentUser={currentUser}
           pendingAdminsCount={pendingAdminsCount}
           unresolvedOccurrencesCount={unresolvedOccurrencesCount}
-          onOpenSwitchUser={() => setIsUserSwitcherOpen(true)}
           onOpenPendingAdmins={() => setIsAdminApprovalOpen(true)}
           onNavigateToOccurrences={() => setActiveTab('occurrences')}
           onResetData={handleResetData}
+          onLogout={handleLogout}
         />
       </div>
 
@@ -586,6 +716,8 @@ export default function App() {
               permissions={permissions}
               onAddOccurrence={handleAddOccurrence}
               onResolveOccurrence={handleResolveOccurrence}
+              onUpdateOccurrence={handleUpdateOccurrence}
+              onDeleteOccurrence={handleDeleteOccurrence}
             />
           )}
 
@@ -619,6 +751,8 @@ export default function App() {
               onAddPatient={handleAddPatient}
               onAddAttendance={handleAddAttendance}
               onOpenPrintModal={() => setPrintModalType('patients')}
+              onUpdatePatient={handleUpdatePatient}
+              onDeletePatient={handleDeletePatient}
             />
           )}
 
@@ -630,6 +764,8 @@ export default function App() {
               onOpenRegisterModal={() => setIsRegisterOpen(true)}
               onApproveAdmin={handleApproveAdmin}
               onRejectAdmin={handleRejectAdmin}
+              onUpdateUser={handleUpdateUser}
+              onDeleteUser={handleDeleteUser}
             />
           )}
 
@@ -647,15 +783,6 @@ export default function App() {
       </div>
 
       {/* Modals */}
-      <UserSwitcherModal
-        isOpen={isUserSwitcherOpen}
-        onClose={() => setIsUserSwitcherOpen(false)}
-        currentUser={currentUser}
-        users={users}
-        onSelectUser={handleUserSelect}
-        onOpenRegister={() => setIsRegisterOpen(true)}
-      />
-
       <RegisterUserModal
         isOpen={isRegisterOpen}
         onClose={() => setIsRegisterOpen(false)}

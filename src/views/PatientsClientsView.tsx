@@ -291,7 +291,7 @@ export const PatientsClientsView: React.FC<PatientsClientsViewProps> = ({
                     </button>
                   )}
 
-                  {currentUser.role === 'Admin' && (
+                  {(currentUser.role === 'Admin' || canRegister) && (
                     <button
                       onClick={() => setDeletingPatient(patient)}
                       className="px-2.5 py-1.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
@@ -369,9 +369,30 @@ export const PatientsClientsView: React.FC<PatientsClientsViewProps> = ({
                       <div key={att.id} className="p-3 text-xs space-y-1 hover:bg-slate-50/60">
                         <div className="flex justify-between items-start font-semibold text-slate-900">
                           <span>{att.procedureName}</span>
-                          <span className="font-mono-numbers text-teal-800 bg-teal-50 px-2 py-0.5 rounded text-[11px]">
-                            {att.durationMinutes} minutos de atendimento
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono-numbers text-teal-800 bg-teal-50 px-2 py-0.5 rounded text-[11px]">
+                              {att.durationMinutes} minutos de atendimento
+                            </span>
+                            {canRegister && (
+                              <button
+                                onClick={() => {
+                                  if (window.confirm('Deseja excluir este registro de procedimento clínico?')) {
+                                    const updatedAttendances = patient.attendances.filter(a => a.id !== att.id);
+                                    if (onUpdatePatient) {
+                                      onUpdatePatient({
+                                        ...patient,
+                                        attendances: updatedAttendances
+                                      });
+                                    }
+                                  }
+                                }}
+                                className="text-slate-400 hover:text-rose-600 transition-colors p-0.5 cursor-pointer"
+                                title="Excluir este procedimento"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
                         </div>
                         <div className="flex flex-wrap items-center gap-x-3 text-[11px] text-slate-500">
                           <span className="font-mono-numbers">

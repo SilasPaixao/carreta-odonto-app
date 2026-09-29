@@ -6,20 +6,20 @@ interface NavbarProps {
   currentUser: AppUser;
   pendingAdminsCount: number;
   unresolvedOccurrencesCount: number;
-  onOpenSwitchUser: () => void;
   onOpenPendingAdmins: () => void;
   onNavigateToOccurrences: () => void;
   onResetData: () => void;
+  onLogout: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   currentUser,
   pendingAdminsCount,
   unresolvedOccurrencesCount,
-  onOpenSwitchUser,
   onOpenPendingAdmins,
   onNavigateToOccurrences,
-  onResetData
+  onResetData,
+  onLogout
 }) => {
   return (
     <header className="sticky top-0 z-40 bg-white border-b border-slate-200">
@@ -70,12 +70,9 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
             )}
 
-            {/* User Switcher / Profile button */}
+            {/* User Profile Badge (Read-only, without switcher) */}
             <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
-              <button
-                onClick={onOpenSwitchUser}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs hover:bg-slate-100 border border-slate-200 transition-colors text-left cursor-pointer"
-              >
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs bg-slate-50 border border-slate-200 select-none">
                 <div className="w-6 h-6 rounded-full bg-teal-100 text-teal-800 flex items-center justify-center font-semibold text-xs">
                   {currentUser.name.charAt(0)}
                 </div>
@@ -83,8 +80,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <div className="font-semibold text-slate-800 truncate">{currentUser.name}</div>
                   <div className="text-[11px] text-slate-500 truncate">{currentUser.role}</div>
                 </div>
-                <Users className="w-3.5 h-3.5 text-slate-400 ml-1" />
-              </button>
+              </div>
 
               <button
                 onClick={onResetData}
@@ -92,6 +88,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                 className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-md transition-colors cursor-pointer"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
+              </button>
+
+              <button
+                onClick={onLogout}
+                title="Sair do sistema (Logout)"
+                className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-md transition-colors cursor-pointer flex items-center gap-1 text-xs font-medium"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Sair</span>
               </button>
             </div>
           </div>
